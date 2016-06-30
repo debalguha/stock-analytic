@@ -2,7 +2,7 @@
 *.iws
 *.iml
 target
-.settings
-.classpath
-.project
-.idea
+./.settings
+./.classpath
+./.project
+./.idea
