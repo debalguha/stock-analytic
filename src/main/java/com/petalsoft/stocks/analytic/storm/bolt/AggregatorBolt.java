@@ -20,26 +20,32 @@ import java.util.Map;
  */
 @SuppressWarnings("serial")
 public class AggregatorBolt extends AbstractRichBolt {
-    private Map<String, Double> initialTickerPrice;
+    private Map<String, Double> lastTickerPriceMap;
 
     @SuppressWarnings("rawtypes")
 	@Override
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
         super.prepare(stormConf, context, collector);
-        initialTickerPrice = Maps.newHashMap();
+        lastTickerPriceMap = Maps.newConcurrentMap();
     }
 
     @Override
     public void execute(Tuple input) {
         String ticker = input.getStringByField(TOPOLOGY_FIELDS.TICKER.name());
         Double price = input.getDoubleByField(TOPOLOGY_FIELDS.TICKER_PRICE.name());
-        if(!initialTickerPrice.containsKey(ticker))
-            initialTickerPrice.put(ticker, price);
-        Double percentChange = calculatePercentChange(price, initialTickerPrice.get(ticker));
-        outputCollector.emit(new Values(new PriceAnalytic(ticker, new DateTime().toString(DateTimeFormat.forPattern("MM/dd/YYYY HH:mmss")), price, percentChange)));
+        if(!lastTickerPriceMap.containsKey(ticker))
+        	lastTickerPriceMap.put(ticker, price);
+        Double lastTickerPrice = lastTickerPriceMap.get(ticker);
+        Double percentChange = calculatePercentChange(price, lastTickerPrice);
+        lastTickerPriceMap.put(ticker, price);
+        outputCollector.emit(new Values(new PriceAnalytic(ticker, new DateTime().toString(DateTimeFormat.forPattern("MM/dd/YYYY HH:mmss")), price, percentChange, calculateChangeDirection(price, lastTickerPrice))));
     }
 
-    private Double calculatePercentChange(Double price, Double initialPrice) {
+    private ChangeDirection calculateChangeDirection(Double price, Double lastTickerPrice) {
+		return price.compareTo(lastTickerPrice) == 0? ChangeDirection.NONE: price.compareTo(lastTickerPrice) > 0? ChangeDirection.UP: ChangeDirection.DOWN;
+	}
+
+	private Double calculatePercentChange(Double price, Double initialPrice) {
         return ((price-initialPrice)/initialPrice)*100;
     }
 

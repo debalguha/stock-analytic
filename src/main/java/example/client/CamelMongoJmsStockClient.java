@@ -16,19 +16,21 @@
  */
 package example.client;
 
-import com.mongodb.DBCursor;
-import com.mongodb.MongoClient;
-
-import org.apache.camel.ExchangePattern;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.util.IOHelper;
-import org.springframework.context.support.AbstractApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import org.apache.camel.ExchangePattern;
+import org.apache.camel.ProducerTemplate;
+import org.apache.commons.lang3.RandomUtils;
+import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import com.mongodb.DBCursor;
+import com.mongodb.MongoClient;
 
 /**
  * Client that uses the {@link ProducerTemplate} to easily exchange messages with the Server.
@@ -37,15 +39,24 @@ import java.util.Properties;
  */
 public final class CamelMongoJmsStockClient {
     private static Properties systemProps;
-    public static void main(final String[] args) throws Exception {
+    @SuppressWarnings("resource")
+	public static void main(final String[] args) throws Exception {
         systemProps = loadProperties();
         AbstractApplicationContext context = new ClassPathXmlApplicationContext("camel-client.xml");
         ProducerTemplate camelTemplate = context.getBean("camelTemplate", ProducerTemplate.class);
-        for(Map<String, Object> stock : readJsonsFromMongoDB()) {
+        List<Map<String, Object>> stocks = readJsonsFromMongoDB();
+        for(Map<String, Object> stock : stocks) {
             stock.remove("_id");stock.remove("Earnings Date");
             camelTemplate.sendBody(String.format("jms:queue:%s", systemProps.getProperty("ticker.queue.name")), ExchangePattern.InOnly, stock);
         }
-        IOHelper.close(context);
+        new Timer().schedule(new TimerTask() {
+			@Override
+			public void run() {
+				Map<String, Object> aRandomStock = stocks.get(RandomUtils.nextInt(0, stocks.size()));
+				aRandomStock.put("Price", ((Double)aRandomStock.get("Price"))+RandomUtils.nextFloat(0.1f, 9.99f));
+				camelTemplate.sendBody(String.format("jms:queue:%s", systemProps.getProperty("ticker.queue.name")), ExchangePattern.InOnly, aRandomStock);
+			}
+		}, 1000, 2000);
     }
 
     private static Properties loadProperties() throws Exception{

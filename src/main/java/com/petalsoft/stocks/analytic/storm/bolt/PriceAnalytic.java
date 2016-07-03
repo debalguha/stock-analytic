@@ -1,22 +1,24 @@
 package com.petalsoft.stocks.analytic.storm.bolt;
 
 import java.io.Serializable;
-import java.util.Date;
 
 /**
  * Created by dguha on 6/5/2016.
  */
+@SuppressWarnings("serial")
 public class PriceAnalytic implements Serializable{
     private String ticker;
     private String timeStamp;
     private Double price;
     private Double percentChangeInPrice;
+    private ChangeDirection changeDirection;
 
-    public PriceAnalytic(String ticker, String timeStamp, Double price, Double percentChangeInPrice) {
+    public PriceAnalytic(String ticker, String timeStamp, Double price, Double percentChangeInPrice, ChangeDirection direction) {
         this.ticker = ticker;
         this.timeStamp = timeStamp;
         this.price = price;
         this.percentChangeInPrice = percentChangeInPrice;
+        this.changeDirection = direction;
     }
 
     @Override
@@ -78,4 +80,12 @@ public class PriceAnalytic implements Serializable{
     public void setPrice(Double price) {
         this.price = price;
     }
+
+	public ChangeDirection getChangeDirection() {
+		return changeDirection;
+	}
+
+	public void setChangeDirection(ChangeDirection changeDirection) {
+		this.changeDirection = changeDirection;
+	}
 }
