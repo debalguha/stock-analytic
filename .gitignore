@@ -1,7 +1,7 @@
-/.iml
-/.idea
-/target/
-/.settings/
-/.classpath
-/.project
-/stock-analytic.iml
+.iml
+.idea
+target/
+.settings/
+.classpath
+.project
+stock-analytic.iml
